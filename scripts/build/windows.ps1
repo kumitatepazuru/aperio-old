@@ -1,4 +1,6 @@
 $url = "https://gstreamer.freedesktop.org/data/pkg/windows/1.26.6/msvc/gstreamer-1.0-devel-msvc-x86_64-1.26.6.msi"
+$runtimeUrl = "https://gstreamer.freedesktop.org/data/pkg/windows/1.26.6/msvc/gstreamer-1.0-msvc-x86_64-1.26.6.msi"
+
 $out = "$env:RUNNER_TEMP\gstreamer.msi"
 curl.exe -L "$url" -o "$out"
 Write-Host "Saved to $out"
@@ -9,7 +11,16 @@ $gstRoot = "C:\gstreamer\1.0\msvc_x86_64"
 $gstBin  = Join-Path $gstRoot "bin"
 if (!(Test-Path $gstBin)) { throw "Not found: $gstBin" }
 
-tree /f $gstRoot
+# runtimeもインストール
+$out = "$env:RUNNER_TEMP\gstreamer-runtime.msi"
+curl.exe -L "$runtimeUrl" -o "$out"
+Write-Host "Saved to $out"
+
+$msi = "$env:RUNNER_TEMP\gstreamer-runtime.msi"
+Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /norestart ADDLOCAL=ALL INSTALLDIR=C:\gstreamer-runtime\" -Wait -NoNewWindow
+$gstRuntimeBin = "C:\gstreamer-runtime\1.0\msvc_x86_64\bin"
+
+tree /f $gstRuntimeBin
 
 # PATH 先頭に GStreamer bin を置く（; 区切り）
 $env:PATH = "$gstBin;$env:PATH"
@@ -43,7 +54,7 @@ bun install --frozen-lockfile
 New-Item -ItemType Directory -Path src-tauri\binaries -Force
 
 # GStreamerの必要なバイナリをコピー
-Copy-Item -Path "$gstRoot\lib\*.dll" -Destination "src-tauri\binaries\" -Force -Verbose
+Copy-Item -Path "$gstRuntimeBin\*.dll" -Destination "src-tauri\binaries\" -Force -Verbose
 
 # pythonの共有ライブラリのパスを取得
 $pythonPath = (python -c "import sys; print(sys.exec_prefix)").Trim()

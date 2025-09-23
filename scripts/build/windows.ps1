@@ -10,12 +10,12 @@ $gstBin  = Join-Path $gstRoot "bin"
 if (!(Test-Path $gstBin)) { throw "Not found: $gstBin" }
 
 # PATH 先頭に GStreamer bin を置く（; 区切り）
-"PATH=$gstBin;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+$env:PATH = "$gstBin;$env:PATH"
 
 # pkg-config の .pc 探索パスも設定
 $pc1 = Join-Path $gstRoot "lib\pkgconfig"
 $pc2 = Join-Path $gstRoot "share\pkgconfig"
-"PKG_CONFIG_PATH=$pc1;$pc2" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+$env:PKG_CONFIG_PATH = "$pc1;$pc2"
 
 choco install -y pkgconfiglite
 

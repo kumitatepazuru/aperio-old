@@ -12,17 +12,17 @@ BIN="/Library/Frameworks/GStreamer.framework/Versions/1.0/bin"
 
 # pkg-configにパスを通す
 # PATH 先頭に GStreamer bin を置く（: 区切り）
-echo "PATH=$BIN${PATH:+:$PATH}" >> "$GITHUB_ENV"
+export PATH=$BIN${PATH:+:$PATH}
 
 # pkg-config のパス（lib/share 両方）
-echo "PKG_CONFIG_PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/lib/pkgconfig:/Library/Frameworks/GStreamer.framework/Versions/1.0/share/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+export PKG_CONFIG_PATH=/Library/Frameworks/GStreamer.framework/Versions/1.0/lib/pkgconfig:/Library/Frameworks/GStreamer.framework/Versions/1.0/share/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}
 
 # Intel mac: sysroot が未設定だと失敗することがあるので明示
-echo "PKG_CONFIG_SYSROOT_DIR=/" >> "$GITHUB_ENV"
+export PKG_CONFIG_SYSROOT_DIR=/
 
 # verify
 which pkg-config || true
-pkg-config --modversion gstreamer-1.0 || (echo "pkg-config can't find gstreamer-1.0" && exit 1)
+pkg-config --modversion gstreamer-1.0 || { echo "pkg-config can't find gstreamer-1.0"; exit 1; }
 
 bun install --frozen-lockfile
 bun run tauri build # 一回ビルドをしてなんのlibraryが必要かを確認する

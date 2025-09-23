@@ -45,16 +45,10 @@ echo "Python library path: $PYTHON_PATH"
 echo "ls $PYTHON_PATH:"
 ls -alh "$PYTHON_PATH"
 
+PYTHON_LIB="$PYTHON_PATH/$PYTHON_LIB"
+
 # ファイルがリンクの可能性があるので実体になるまでたどる
-while [ -L "$PYTHON_PATH/$PYTHON_LIB" ]; do
-  LINK_TARGET=$(readlink "$PYTHON_PATH/$PYTHON_LIB") # 例：libpython3.13.dylib.1.0 -> libpython3.13.dylib.1.0.1
-  if [[ "$LINK_TARGET" = /* ]]; then # 絶対パスかどうか
-    PYTHON_LIB="$LINK_TARGET"
-  else
-    PYTHON_LIB="$(dirname "$PYTHON_PATH/$PYTHON_LIB")/$LINK_TARGET"
-  fi
-done
-echo "Python shared library: $PYTHON_PATH/$PYTHON_LIB"
+echo "Python shared library: $PYTHON_LIB"
 
 # src-tauri/binariesにコピー
-cp --verbose "$PYTHON_PATH/$PYTHON_LIB" src-tauri/binaries/
+cp -v "$PYTHON_LIB" src-tauri/binaries/

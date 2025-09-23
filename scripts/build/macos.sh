@@ -30,7 +30,7 @@ bun install --frozen-lockfile
 mkdir -p src-tauri/binaries
 
 # GStreamerの必要なバイナリをコピー
-cp -R "$BIN"/* src-tauri/binaries/
+cp -R -v "$BIN"/* src-tauri/binaries/
 
 # pythonの共有ライブラリのパスを取得
 PYTHON_PATH=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")

@@ -16,6 +16,9 @@ pkg-config --modversion gstreamer-1.0 || { echo "pkg-config can't find gstreamer
 
 bun install --frozen-lockfile
 
+# src-tauriにbinariesディレクトリを作成
+mkdir -p src-tauri/binaries
+
 # pythonの共有ライブラリのパスを取得
 PYTHON_PATH=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
 PYTHON_LIB=$(python3 -c "import sys; print(f'libpython{sys.version_info.major}.{sys.version_info.minor}.so')")

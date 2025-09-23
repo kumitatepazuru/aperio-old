@@ -33,27 +33,18 @@ mkdir -p src-tauri/binaries
 cp -R "$BIN"/* src-tauri/binaries/
 
 # pythonの共有ライブラリのパスを取得
-PYTHON_LIB=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LDLIBRARY'))")
 PYTHON_PATH=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
-if [ -z "$PYTHON_LIB" ]
-then
-  echo "Failed to get Python shared library name"
-  exit 1
-fi
+PYTHON_LIB=$(python3 -c "import sys; print(f'libpython{sys.version_info.major}.{sys.version_info.minor}.dylib')")
+
 if [ -z "$PYTHON_PATH" ]
 then
   echo "Failed to get Python library path"
   exit 1
 fi
 echo "Python library path: $PYTHON_PATH"
-echo "Python library name: $PYTHON_LIB"
 echo "ls $PYTHON_PATH:"
-ls "$PYTHON_PATH"
-if [ ! -f "$PYTHON_PATH/$PYTHON_LIB" ]
-then
-  echo "Python shared library not found: $PYTHON_PATH/$PYTHON_LIB"
-  exit 1
-fi
+ls -alh "$PYTHON_PATH"
+
 # ファイルがリンクの可能性があるので実体になるまでたどる
 while [ -L "$PYTHON_PATH/$PYTHON_LIB" ]; do
   LINK_TARGET=$(readlink "$PYTHON_PATH/$PYTHON_LIB") # 例：libpython3.13.dylib.1.0 -> libpython3.13.dylib.1.0.1
@@ -66,4 +57,4 @@ done
 echo "Python shared library: $PYTHON_PATH/$PYTHON_LIB"
 
 # src-tauri/binariesにコピー
-cp "$PYTHON_PATH/$PYTHON_LIB" src-tauri/binaries/
+cp --verbose "$PYTHON_PATH/$PYTHON_LIB" src-tauri/binaries/

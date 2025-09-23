@@ -17,26 +17,21 @@ pkg-config --modversion gstreamer-1.0 || { echo "pkg-config can't find gstreamer
 bun install --frozen-lockfile
 
 # pythonの共有ライブラリのパスを取得
-PYTHON_LIB=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LDLIBRARY'))")
 PYTHON_PATH=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
-if [ -z "$PYTHON_LIB" ]
-then
-  echo "Failed to get Python shared library name"
-  exit 1
-fi
+PYTHON_LIB=$(python3 -c "import sys; print(f'libpython{sys.version_info.major}.{sys.version_info.minor}.so')")
+
 if [ -z "$PYTHON_PATH" ]
 then
   echo "Failed to get Python library path"
   exit 1
 fi
-if [ ! -f "$PYTHON_PATH/$PYTHON_LIB" ]
-then
-  echo "Python shared library not found: $PYTHON_PATH/$PYTHON_LIB"
-  exit 1
-fi
+echo "Python library path: $PYTHON_PATH"
+echo "ls $PYTHON_PATH:"
+ls -alh "$PYTHON_PATH"
+
 # ファイルがリンクの可能性があるので実体になるまでたどる
 while [ -L "$PYTHON_PATH/$PYTHON_LIB" ]; do
-  LINK_TARGET=$(readlink "$PYTHON_PATH/$PYTHON_LIB") # 例：libpython3.13.dylib.1.0 -> libpython3.13.dylib.1.0.1
+  LINK_TARGET=$(readlink "$PYTHON_PATH/$PYTHON_LIB") # 例：libpython3.13.so.1.0 -> libpython3.13.so.1.0.1
   if [[ "$LINK_TARGET" = /* ]]; then # 絶対パスかどうか
     PYTHON_LIB="$LINK_TARGET"
   else
@@ -46,4 +41,4 @@ done
 echo "Python shared library: $PYTHON_PATH/$PYTHON_LIB"
 
 # src-tauri/binariesにコピー
-cp "$PYTHON_PATH/$PYTHON_LIB" src-tauri/binaries/
+cp --verbose "$PYTHON_PATH/$PYTHON_LIB" src-tauri/binaries/

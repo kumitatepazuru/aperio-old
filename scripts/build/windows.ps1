@@ -41,7 +41,7 @@ bun install --frozen-lockfile
 New-Item -ItemType Directory -Path src-tauri\binaries -Force
 
 # GStreamerの必要なバイナリをコピー
-Copy-Item -Path "$gstBin\*" -Destination "src-tauri\binaries\" -Force
+Copy-Item -Path "$gstBin\*" -Destination "src-tauri\binaries\" -Force -Verbose
 
 # pythonの共有ライブラリのパスを取得
 $pythonPath = (python -c "import sys; print(sys.exec_prefix)").Trim()
@@ -51,4 +51,4 @@ $pythonVersion = (python -c "import sys; print(f'{sys.version_info.major}.{sys.v
 $pythonDllPath = Join-Path $pythonPath "python$($pythonVersion -replace '\.','').dll"
 if (!(Test-Path $pythonDllPath)) { throw "Not found: $pythonDllPath" }
 # DLLをコピー
-Copy-Item -Path $pythonDllPath -Destination "src-tauri\binaries\" -Force
+Copy-Item -Path $pythonDllPath -Destination "src-tauri\binaries\" -Force -Verbose

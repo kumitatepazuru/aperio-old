@@ -1,0 +1,33 @@
+{
+  "bundle": {
+    "targets": [
+      "deb",
+      "rpm",
+      "nsis",
+      "dmg"
+    ],
+    "linux": {
+      "deb": {
+        "depends": [
+          "libgstreamer1.0-0",
+          "libgstreamer-plugins-base1.0-0",
+          "gstreamer1.0-plugins-base",
+          "gstreamer1.0-plugins-good",
+          "gstreamer1.0-plugins-bad",
+          "gstreamer1.0-plugins-ugly"
+        ]
+      },
+      "rpm": {
+        "depends": [
+          "gstreamer1",
+          "gstreamer1-plugins-base",
+          "gstreamer1-plugins-good",
+          "gstreamer1-plugins-good-extras",
+          "gstreamer1-plugins-bad-free",
+          "gstreamer1-plugins-bad-free-extras",
+          "gstreamer1-plugins-ugly-free"
+        ]
+      }
+    }
+  }
+}

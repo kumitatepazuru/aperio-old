@@ -14,7 +14,7 @@ jobs:
         include:
           - platform: 'macos-latest' # for Arm based macs (M1 and above).
             args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest' # for Intel based macs.
+          - platform: 'macos-15-intel' # for Intel based macs.
             args: '--target x86_64-apple-darwin'
           - platform: 'ubuntu-24.04' # for Tauri v1 you could replace this with ubuntu-20.04.
             args: ''
@@ -33,6 +33,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with: 
           workspaces: "src-tauri -> target"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13' 
 
       - name: run linux script
         if: startsWith(matrix.platform, 'ubuntu')

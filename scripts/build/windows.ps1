@@ -9,6 +9,8 @@ $gstRoot = "C:\gstreamer\1.0\msvc_x86_64"
 $gstBin  = Join-Path $gstRoot "bin"
 if (!(Test-Path $gstBin)) { throw "Not found: $gstBin" }
 
+tree $gstRoot
+
 # PATH 先頭に GStreamer bin を置く（; 区切り）
 $env:PATH = "$gstBin;$env:PATH"
 

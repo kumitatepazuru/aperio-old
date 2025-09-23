@@ -45,6 +45,10 @@ then
   echo "Failed to get Python library path"
   exit 1
 fi
+echo "Python library path: $PYTHON_PATH"
+echo "Python library name: $PYTHON_LIB"
+echo "ls $PYTHON_PATH:"
+ls "$PYTHON_PATH"
 if [ ! -f "$PYTHON_PATH/$PYTHON_LIB" ]
 then
   echo "Python shared library not found: $PYTHON_PATH/$PYTHON_LIB"

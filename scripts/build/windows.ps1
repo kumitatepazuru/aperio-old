@@ -9,7 +9,7 @@ $gstRoot = "C:\gstreamer\1.0\msvc_x86_64"
 $gstBin  = Join-Path $gstRoot "bin"
 if (!(Test-Path $gstBin)) { throw "Not found: $gstBin" }
 
-tree $gstRoot
+tree /f $gstRoot
 
 # PATH 先頭に GStreamer bin を置く（; 区切り）
 $env:PATH = "$gstBin;$env:PATH"
@@ -43,7 +43,7 @@ bun install --frozen-lockfile
 New-Item -ItemType Directory -Path src-tauri\binaries -Force
 
 # GStreamerの必要なバイナリをコピー
-Copy-Item -Path "$gstBin\*" -Destination "src-tauri\binaries\" -Force -Verbose
+Copy-Item -Path "$gstRoot\lib\*.dll" -Destination "src-tauri\binaries\" -Force -Verbose
 
 # pythonの共有ライブラリのパスを取得
 $pythonPath = (python -c "import sys; print(sys.exec_prefix)").Trim()

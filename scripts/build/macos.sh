@@ -10,9 +10,6 @@ sudo installer -pkg "$RUNNER_TEMP/gst-devel.pkg"   -target /
 BIN="/Library/Frameworks/GStreamer.framework/Versions/1.0/bin"
 [ -d "$BIN" ] || { echo "Not found: $BIN"; exit 1; }
 
-brew install tree
-tree "$BIN/../"
-
 # pkg-configにパスを通す
 # PATH 先頭に GStreamer bin を置く（: 区切り）
 export PATH=$BIN${PATH:+:$PATH}
@@ -33,7 +30,7 @@ bun install --frozen-lockfile
 mkdir -p src-tauri/binaries
 
 # GStreamerの必要なバイナリをコピー
-cp -R -v "$BIN"/* src-tauri/binaries/
+cp -R -v "$BIN"../lib/*.dylib src-tauri/binaries/
 
 # pythonの共有ライブラリのパスを取得
 PYTHON_PATH=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")

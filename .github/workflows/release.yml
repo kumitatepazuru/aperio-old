@@ -54,7 +54,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Custom Opencv Build
+          name: Custom Opencv Build - ${{ matrix.platform }}${{matrix.args}}
           path: src-tauri/binaries/wheels/
 
       - uses: tauri-apps/tauri-action@v0

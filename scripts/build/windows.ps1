@@ -70,6 +70,10 @@ if (!(Test-Path $pythonDllPath)) { throw "Not found: $pythonDllPath" }
 Copy-Item -Path $pythonDllPath -Destination "src-tauri\binaries\" -Force -Verbose
 
 # opencvをビルド
+# "\"がCMakeの引数でエスケープされてしまうので、"/"に置換しておく
+$gstLib  = $gstLib -replace '\\','/'
+$gstRoot = $gstRoot -replace '\\','/'
+
 # https://medium.com/@kenancan.dev/building-opencv-gstreamer-on-windows-a-8-hour-battle-bdb3211aa834
 # https://qiita.com/TakahiroOta/items/a34b3d1db6475ddc31d7
 $env:CMAKE_ARGS = "-DGSTREAMER_app_LIBRARY=${gstLib}/gstapp-1.0.lib `

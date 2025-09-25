@@ -6,16 +6,25 @@ mv opencv-python-headless-*/ opencv
 cd opencv
 
 # https://docs.opencv.org/4.x/db/d05/tutorial_config_reference.html
-CMAKE_ARGS="-D CMAKE_BUILD_TYPE=RELEASE \
-    -D CPU_DISPATCH=AVX,AVX2 \
-    -D WITH_OPENCL=ON \
-    -D WITH_V4L=OFF \
-    -D WITH_FFMPEG=OFF \
-    -D WITH_GSTREAMER=ON \
-    -D HIGHGUI_ENABLE_PLUGINS=OFF \
-    -D WITH_GTK=OFF \
-    -D WITH_WIN32API=OFF \
-    -D BUILD_opencv_python3=ON" MAKEFLAGS="-j$(nproc)" pip wheel . --verbose
+export CMAKE_ARGS="-DCMAKE_BUILD_TYPE=RELEASE \
+    -DCPU_DISPATCH=AVX,AVX2 \
+    -DWITH_OPENCL=ON \
+    -DWITH_V4L=OFF \
+    -DWITH_FFMPEG=OFF \
+    -DWITH_GSTREAMER=ON \
+    -DHIGHGUI_ENABLE_PLUGINS=OFF \
+    -DWITH_GTK=OFF \
+    -DWITH_WIN32API=OFF \
+    -DBUILD_opencv_python3=ON"
 
+export CMAKE_GENERATOR=Ninja
+export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc 2>/dev/null || echo 4)
+
+# なぜかwindowsに対してのみplatform specificationを指定されるので消す
+# aarch64はビルド対象外なので一旦無視
+# https://github.com/opencv/opencv-python/issues/825#issuecomment-1503349866
+sed -i 's/-DCMAKE_GENERATOR_PLATFORM=x64//g' setup.py
+
+pip wheel . --verbose
 mkdir -p ../src-tauri/binaries/wheels/
 cp -v opencv_python_headless*.whl ../src-tauri/binaries/wheels/

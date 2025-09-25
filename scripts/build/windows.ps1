@@ -30,7 +30,7 @@ $pc1 = Join-Path $gstRoot "lib\pkgconfig"
 $pc2 = Join-Path $gstRoot "share\pkgconfig"
 $env:PKG_CONFIG_PATH = "$pc1;$pc2"
 
-choco install -y pkgconfiglite ninja
+choco install -y pkgconfiglite
 
 # verify
 Get-Command pkg-config -ErrorAction SilentlyContinue

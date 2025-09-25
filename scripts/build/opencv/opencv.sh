@@ -1,3 +1,10 @@
+if [ "$CACHE_HIT" = "true" ]; then
+  echo "Cache hit, skipping build."
+  exit 0
+else
+  echo "Cache miss, proceeding with build."
+fi
+
 pip download --no-deps --no-binary opencv-python-headless opencv-python-headless
 
 tar xzf opencv-python-headless-*.tar.gz
@@ -30,10 +37,11 @@ export CMAKE_ARGS="$CMAKE_ARGS \
 export CMAKE_GENERATOR=Ninja
 export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc 2>/dev/null || echo 4)
 
-# なぜかwindowsに対してのみplatform specificationを指定されるので消す
-# aarch64はビルド対象外なので一旦無視
+# なぜかwindowsに対してのみplatform specificationを指定される、ffmpegのdllをコピーをしようとしてエラーを吐くので消す
+# platform specificationに関してはaarch64はビルド対象外なので一旦無視
 # https://github.com/opencv/opencv-python/issues/825#issuecomment-1503349866
-sed -i 's/-DCMAKE_GENERATOR_PLATFORM=x64//g' setup.py
+# https://github.com/opencv/opencv-python/blob/4.x/setup.py#L108-L112
+sed -i -E 's/-DCMAKE_GENERATOR_PLATFORM=x64//g; s@r"bin/opencv_videoio_ffmpeg\\d{4}%s\\.dll" % \("_64" if is64 else ""\)@@g' setup.py
 
 pip wheel . --verbose
 mkdir -p ../src-tauri/binaries/wheels/

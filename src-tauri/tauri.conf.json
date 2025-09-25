@@ -40,7 +40,8 @@
       "binaries/uv/uv"
     ],
     "resources": {
-      "binaries/wheels/": "wheels/"
+      "binaries/wheels/": "wheels/",
+      "binaries/*": ""
     }
   }
 }

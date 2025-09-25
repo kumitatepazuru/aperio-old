@@ -48,3 +48,6 @@ echo "Python shared library: $PYTHON_LIB"
 
 # src-tauri/binariesにコピー
 cp --verbose "$PYTHON_LIB" src-tauri/binaries/
+
+# opencvをビルド
+bash scripts/build/opencv/opencv.sh

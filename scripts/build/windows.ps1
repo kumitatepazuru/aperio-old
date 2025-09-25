@@ -66,3 +66,6 @@ $pythonDllPath = Join-Path $pythonPath "python$($pythonVersion -replace '\.','')
 if (!(Test-Path $pythonDllPath)) { throw "Not found: $pythonDllPath" }
 # DLLをコピー
 Copy-Item -Path $pythonDllPath -Destination "src-tauri\binaries\" -Force -Verbose
+
+# opencvをビルド
+bash scripts/build/opencv/opencv.sh

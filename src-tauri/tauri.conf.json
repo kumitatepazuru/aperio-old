@@ -38,6 +38,9 @@
     ],
     "externalBin": [
       "binaries/uv/uv"
-    ]
+    ],
+    "resources": {
+      "binaries/wheels/": "wheels/"
+    }
   }
 }

@@ -72,17 +72,18 @@ Copy-Item -Path $pythonDllPath -Destination "src-tauri\binaries\" -Force -Verbos
 # opencvをビルド
 # https://medium.com/@kenancan.dev/building-opencv-gstreamer-on-windows-a-8-hour-battle-bdb3211aa834
 # https://qiita.com/TakahiroOta/items/a34b3d1db6475ddc31d7
-$env:CMAKE_ARGS = "-DGSTREAMER_app_LIBRARY=$gstLib/gstapp-1.0.lib \
-  -DGSTREAMER_audio_LIBRARY=$gstLib/gstaudio-1.0.lib \
-  -DGSTREAMER_base_LIBRARY=$gstLib/gstbase-1.0.lib \
-  -DGSTREAMER_glib_INCLUDE_DIR=$gstRoot/include/glib-2.0 \
-  -DGSTREAMER_glib_LIBRARY=$gstLib/glib-2.0.lib \
-  -DGSTREAMER_glibconfig_INCLUDE_DIR=$gstLib/glib-2.0/include \
-  -DGSTREAMER_gobject_LIBRARY=$gstLib/gobject-2.0.lib \
-  -DGSTREAMER_gst_INCLUDE_DIR=$gstRoot/include/gstreamer-1.0 \
-  -DGSTREAMER_gstreamer_LIBRARY=$gstLib/gstreamer-1.0.lib \
-  -DGSTREAMER_pbuits_LIBRARY=$gstLib/gstpbutils-1.0.lib \
-  -DGSTREAMER_riff_LIBRARY=$gstLib/gstriff-1.0.lib \
-  -DGSTREAMER_video_LIBRARY=$gstLib/gstvideo-1.0.lib"
+$env:CMAKE_ARGS = "-DGSTREAMER_app_LIBRARY=${gstLib}/gstapp-1.0.lib `
+  -DGSTREAMER_audio_LIBRARY=${gstLib}/gstaudio-1.0.lib `
+  -DGSTREAMER_base_LIBRARY=${gstLib}/gstbase-1.0.lib `
+  -DGSTREAMER_glib_INCLUDE_DIR=${gstRoot}/include/glib-2.0 `
+  -DGSTREAMER_glib_LIBRARY=${gstLib}/glib-2.0.lib `
+  -DGSTREAMER_glibconfig_INCLUDE_DIR=${gstLib}/glib-2.0/include `
+  -DGSTREAMER_gobject_LIBRARY=${gstLib}/gobject-2.0.lib `
+  -DGSTREAMER_gst_INCLUDE_DIR=${gstRoot}/include/gstreamer-1.0 `
+  -DGSTREAMER_gstreamer_LIBRARY=${gstLib}/gstreamer-1.0.lib `
+  -DGSTREAMER_pbutils_LIBRARY=${gstLib}/gstpbutils-1.0.lib `
+  -DGSTREAMER_riff_LIBRARY=${gstLib}/gstriff-1.0.lib `
+  -DGSTREAMER_video_LIBRARY=${gstLib}/gstvideo-1.0.lib"
+
 
 bash scripts/build/opencv/opencv.sh

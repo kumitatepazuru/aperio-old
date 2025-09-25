@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "uv:update": "bun run ./scripts/update-uv.ts"
+    "tauri": "tauri"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

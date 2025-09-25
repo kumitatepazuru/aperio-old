@@ -49,7 +49,8 @@ try {
 }
 
 bun install --frozen-lockfile
-bun run uv:update
+uv sync --locked --all-extras --dev
+uv run scripts/update-uv.py
 
 # src-tauriにbinariesディレクトリを作成(なければ)
 New-Item -ItemType Directory -Path src-tauri\binaries -Force

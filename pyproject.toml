@@ -1,0 +1,9 @@
+[project]
+name = "aperio"
+version = "0.1.0"
+description = "A Plugin-based Open Source Video Editor"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "requests>=2.32.5",
+]

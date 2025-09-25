@@ -15,7 +15,8 @@ which pkg-config || true
 pkg-config --modversion gstreamer-1.0 || { echo "pkg-config can't find gstreamer-1.0"; exit 1; }
 
 bun install --frozen-lockfile
-bun run uv:update
+uv sync --locked --all-extras --dev
+uv run scripts/update-uv.py
 
 # src-tauriにbinariesディレクトリを作成
 mkdir -p src-tauri/binaries

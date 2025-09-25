@@ -1,5 +1,4 @@
-pip install build
-pip download --no-binary :all: opencv-python-headless
+pip download --no-deps --no-binary opencv-python-headless opencv-python-headless
 
 tar xzvf opencv-python-headless-*.tar.gz
 mv opencv-python-headless-*/ opencv
@@ -18,7 +17,7 @@ export CMAKE_ARGS="-D CMAKE_BUILD_TYPE=RELEASE \
     -D WITH_WIN32API=OFF \
     -D BUILD_opencv_python3=ON"
 
-MAKEFLAGS="-j$(nproc)" python -m build --wheel
+MAKEFLAGS="-j$(nproc)" pip wheel .
 
 mkdir -p ../src-tauri/binaries/wheels/
 cp -v dist/*.whl ../src-tauri/binaries/wheels/

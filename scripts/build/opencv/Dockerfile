@@ -14,8 +14,7 @@ RUN apt-get install -y libgstreamer1.0-dev \
     ninja-build \
     patchelf \
     --no-install-recommends --no-install-suggests
-RUN pip install build
-RUN pip download --no-binary :all: opencv-python-headless
+RUN pip download --no-deps --no-binary opencv-python-headless opencv-python-headless
 RUN tar xzvf opencv-python-headless-*.tar.gz
 RUN mv opencv-python-headless-*/ opencv
 
@@ -32,4 +31,4 @@ ARG CMAKE_ARGS="-D CMAKE_BUILD_TYPE=RELEASE \
     -D WITH_WIN32API=OFF \
     -D BUILD_opencv_python3=ON"
 
-RUN MAKEFLAGS="-j$(nproc)" python -m build --wheel
+RUN MAKEFLAGS="-j$(nproc)" pip wheel .

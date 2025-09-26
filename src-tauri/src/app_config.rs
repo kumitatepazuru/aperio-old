@@ -2,7 +2,9 @@ use std::{fs::File, io::Write};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::{App, AppHandle, Manager};
+use tauri::{AppHandle, Manager};
+
+use crate::dir_util::get_data_dir;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PythonStruct {
@@ -15,11 +17,10 @@ pub struct AppConfig {
     pub python: PythonStruct,
 }
 
-pub fn init_config(app: &App) {
+pub fn init_config(app: &AppHandle) {
     // 設定ファイルがあるか確認し、なければdefault-config.jsonをコピー
-    let appdata_dir = app.path().app_data_dir().unwrap();
+    let appdata_dir = get_data_dir(app);
     let config_path = appdata_dir.join("config.json");
-    println!("config path: {:?}", &config_path);
     if !config_path.exists() {
         let config_bytes = include_bytes!("../data/default-config.json");
         let mut file = File::create(&config_path).unwrap();
@@ -32,7 +33,7 @@ pub fn init_config(app: &App) {
 }
 
 pub fn read_config(app: &AppHandle) -> Option<AppConfig> {
-    let appdata_dir = app.path().app_data_dir().unwrap();
+    let appdata_dir = get_data_dir(app);
     let config_path = appdata_dir.join("config.json");
     if config_path.exists() {
         let config = std::fs::read_to_string(&config_path).ok()?;

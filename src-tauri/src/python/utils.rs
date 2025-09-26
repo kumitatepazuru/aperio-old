@@ -4,7 +4,7 @@ use std::fs;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::ShellExt;
 
-use crate::app_config::read_config;
+use crate::{app_config::read_config, dir_util::get_local_data_dir};
 
 pub fn get_base_args(appdata_dir: &str) -> Vec<&str> {
     vec!["--directory", appdata_dir, "--no-cache"]
@@ -34,7 +34,7 @@ async fn run_uv(app: &AppHandle, args: Vec<&str>) -> Result<String> {
 
 pub fn check_python_installed(app: &AppHandle) -> bool {
     // appdataのdir pathを取得
-    let appdata_dir = app.path().app_data_dir().unwrap();
+    let appdata_dir = get_local_data_dir(app);
     // python/bin/python(.exe)のpathを取得
     let python_path = appdata_dir
         .join("python")
@@ -52,7 +52,7 @@ pub fn check_python_installed(app: &AppHandle) -> bool {
 
 pub async fn install_packages(app: &AppHandle, packages: Vec<&str>) -> Result<()> {
     // appdataのdir pathを取得
-    let appdata_path = app.path().app_data_dir()?;
+    let appdata_path = get_local_data_dir(app);
     let appdata_dir = appdata_path.to_str().unwrap();
 
     let python_dir = appdata_path.join("python");
@@ -71,7 +71,7 @@ pub async fn install_packages(app: &AppHandle, packages: Vec<&str>) -> Result<()
 
 pub async fn install_python(app: &AppHandle) -> Result<()> {
     // appdataのdir pathを取得
-    let appdata_path = app.path().app_data_dir()?;
+    let appdata_path = get_local_data_dir(app);
     let appdata_dir = appdata_path.to_str().unwrap();
     let config = read_config(app).context("No config found, cannot install Python")?;
 
@@ -149,8 +149,8 @@ pub async fn install_python(app: &AppHandle) -> Result<()> {
 }
 
 pub async fn sync_packages(app: &AppHandle) -> Result<String> {
-    let appdata_path = app.path().app_data_dir()?;
-    let appdata_dir = appdata_path.to_str().unwrap();
+    let appdata_dir = get_local_data_dir(app);
+    let appdata_dir = appdata_dir.to_str().unwrap();
 
     let mut args = vec!["sync"];
     args.extend(get_base_args(appdata_dir));

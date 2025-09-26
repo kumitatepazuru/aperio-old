@@ -19,6 +19,7 @@ pub fn init_config(app: &App) {
     // 設定ファイルがあるか確認し、なければdefault-config.jsonをコピー
     let appdata_dir = app.path().app_data_dir().unwrap();
     let config_path = appdata_dir.join("config.json");
+    println!("config path: {:?}", &config_path);
     if !config_path.exists() {
         let config_bytes = include_bytes!("../data/default-config.json");
         let mut file = File::create(&config_path).unwrap();

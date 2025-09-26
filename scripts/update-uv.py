@@ -53,6 +53,9 @@ def download_and_decompress(url, output_path, decompressed_dir):
     url_name = os.path.basename(url).split(".")[0][3:]  # 拡張子なしのファイル名(uv-を除く)
     final_output_path = os.path.join(output_path, f"uv-{url_name}{ext}")
     os.rename(os.path.join(decompressed_dir, f"uv{ext}"), final_output_path)
+    # 実行権限を付与
+    if not ext:  # Windows以外
+        os.chmod(final_output_path, 0o755)
     print(f"Downloaded and decompressed to {final_output_path}")
 
 def main():

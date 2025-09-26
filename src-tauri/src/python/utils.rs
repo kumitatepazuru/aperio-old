@@ -138,12 +138,8 @@ pub async fn install_python(app: &AppHandle) -> Result<()> {
         .context("No opencv-python-headless wheel file found in resources/wheel")?;
 
     // uv addコマンドを実行してopencv-python-headlessをインストール
-    match install_packages(app, vec![wheel_path.to_str().unwrap()]).await {
-        std::result::Result::Ok(_) => {
-            println!("Successfully installed Python and required packages")
-        }
-        Err(_) => return Err(anyhow!("Failed to install required packages")),
-    }
+    install_packages(app, vec![wheel_path.to_str().unwrap()]).await?;
+    println!("Successfully installed Python and required packages");
 
     Ok(())
 }

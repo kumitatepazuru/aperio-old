@@ -12,7 +12,7 @@ pub fn get_data_dir(app: &AppHandle) -> PathBuf {
 }
 
 pub fn get_local_data_dir(app: &AppHandle) -> PathBuf {
-    let local_data_dir = app.path().local_data_dir().unwrap();
+    let local_data_dir = app.path().app_local_data_dir().unwrap();
     if !local_data_dir.exists() {
         println!("Creating local data directory at {:?}", &local_data_dir);
         std::fs::create_dir_all(&local_data_dir).unwrap();

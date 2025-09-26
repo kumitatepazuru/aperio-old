@@ -2,7 +2,7 @@ use std::{fs::File, io::Write};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 use crate::dir_util::get_data_dir;
 

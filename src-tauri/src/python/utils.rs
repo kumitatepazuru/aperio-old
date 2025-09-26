@@ -32,9 +32,9 @@ async fn run_uv(app: &AppHandle, args: Vec<&str>) -> Result<String> {
     Ok(String::from_utf8(output.stdout.clone())?)
 }
 
-pub fn check_python_installed(app: &AppHandle) -> bool {
+pub fn check_python_installed(app: &AppHandle) -> Result<bool> {
     // appdataのdir pathを取得
-    let appdata_dir = get_local_data_dir(app);
+    let appdata_dir = get_local_data_dir(app)?;
     // python/bin/python(.exe)のpathを取得
     let python_path = appdata_dir
         .join("python")
@@ -45,15 +45,17 @@ pub fn check_python_installed(app: &AppHandle) -> bool {
     // pythonが存在するか確認
     if python_path.exists() {
         println!("Python is already installed at {:?}", python_path);
-        return true;
+        return Ok(true);
     }
-    false
+    Ok(false)
 }
 
 pub async fn install_packages(app: &AppHandle, packages: Vec<&str>) -> Result<()> {
     // appdataのdir pathを取得
-    let appdata_path = get_local_data_dir(app);
-    let appdata_dir = appdata_path.to_str().unwrap();
+    let appdata_path = get_local_data_dir(app)?;
+    let appdata_dir = appdata_path
+        .to_str()
+        .context("Failed to convert appdata path to str")?;
 
     let python_dir = appdata_path.join("python");
     let mut args = vec!["add"];
@@ -61,7 +63,9 @@ pub async fn install_packages(app: &AppHandle, packages: Vec<&str>) -> Result<()
     args.extend([
         "--no-python-downloads",
         "--python",
-        python_dir.to_str().unwrap(),
+        python_dir
+            .to_str()
+            .context("Failed to convert python path to str")?,
     ]);
     args.extend(get_base_args(appdata_dir));
 
@@ -71,8 +75,10 @@ pub async fn install_packages(app: &AppHandle, packages: Vec<&str>) -> Result<()
 
 pub async fn install_python(app: &AppHandle) -> Result<()> {
     // appdataのdir pathを取得
-    let appdata_path = get_local_data_dir(app);
-    let appdata_dir = appdata_path.to_str().unwrap();
+    let appdata_path = get_local_data_dir(app)?;
+    let appdata_dir = appdata_path
+        .to_str()
+        .context("Failed to convert appdata path to str")?;
     let config = read_config(app).context("No config found, cannot install Python")?;
 
     // uv initをする
@@ -127,7 +133,7 @@ pub async fn install_python(app: &AppHandle) -> Result<()> {
 
     // resources/wheelディレクトリの中からopencv-python-headlessのwhlファイルを探す
     let wheel_dir = app.path().resource_dir()?.join("wheels");
-    let wheel_path = std::fs::read_dir(wheel_dir)?
+    let wheel_path = fs::read_dir(wheel_dir)?
         .filter_map(|entry| entry.ok())
         .find(|entry| {
             let binding = entry.file_name();
@@ -145,8 +151,10 @@ pub async fn install_python(app: &AppHandle) -> Result<()> {
 }
 
 pub async fn sync_packages(app: &AppHandle) -> Result<String> {
-    let appdata_dir = get_local_data_dir(app);
-    let appdata_dir = appdata_dir.to_str().unwrap();
+    let appdata_dir = get_local_data_dir(app)?;
+    let appdata_dir = appdata_dir
+        .to_str()
+        .context("Failed to convert appdata path to str")?;
 
     let mut args = vec!["sync"];
     args.extend(get_base_args(appdata_dir));

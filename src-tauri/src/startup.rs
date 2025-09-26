@@ -9,10 +9,10 @@ pub fn startup(app: &App) -> Result<()> {
         let app_handle = app.handle().clone();
 
         // configの初期化
-        app_config::init_config(&app_handle);
+        app_config::init_config(&app_handle)?;
 
         // pythonがインストールされているか確認
-        if !python::utils::check_python_installed(&app_handle) {
+        if !python::utils::check_python_installed(&app_handle)? {
             println!("Python is not installed. Installing...");
             let python_installed = python::utils::install_python(&app_handle).await;
             println!("Python installed: {:?}", python_installed);
@@ -23,7 +23,7 @@ pub fn startup(app: &App) -> Result<()> {
         }
 
         // PYTHONPATHとPYTHONHOMEの設定
-        let appdata_dir = get_local_data_dir(&app_handle);
+        let appdata_dir = get_local_data_dir(&app_handle)?;
         let python_path = appdata_dir.join("python");
 
         std::env::set_var("PYTHONPATH", &python_path);

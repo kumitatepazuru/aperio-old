@@ -21,7 +21,7 @@ RUN mv opencv-python-headless-*/ opencv
 # https://docs.opencv.org/4.x/db/d05/tutorial_config_reference.html
 WORKDIR /build/opencv/
 ARG CMAKE_ARGS="-D CMAKE_BUILD_TYPE=RELEASE \
-    # -DCPU_DISPATCH=AVX,AVX2 \
+    -D CPU_DISPATCH=AVX,AVX2 \
     -D WITH_OPENCL=ON \
     -D WITH_V4L=OFF \
     -D WITH_FFMPEG=OFF \

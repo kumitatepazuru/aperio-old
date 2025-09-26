@@ -41,7 +41,10 @@ export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc 2>/dev/null || echo 4)
 # platform specificationに関してはaarch64はビルド対象外なので一旦無視
 # https://github.com/opencv/opencv-python/issues/825#issuecomment-1503349866
 # https://github.com/opencv/opencv-python/blob/4.x/setup.py#L108-L112
-sed -i -E 's/-DCMAKE_GENERATOR_PLATFORM=x64//g; s@r"bin/opencv_videoio_ffmpeg\\d{4}%s\\.dll" % \("_64" if is64 else ""\)@@g' setup.py
+sed -i \
+  -e 's/-DCMAKE_GENERATOR_PLATFORM=x64//g' \
+  -e 's#r"bin/opencv_videoio_ffmpeg\\d{4}%s\\.dll" % ("_64" if is64 else "")##g' \
+    setup.py
 
 pip wheel . --verbose
 mkdir -p ../src-tauri/binaries/wheels/

@@ -34,7 +34,8 @@
       "deb",
       "rpm",
       "nsis",
-      "dmg"
+      "dmg",
+      "msi"
     ],
     "externalBin": [
       "binaries/uv/uv"

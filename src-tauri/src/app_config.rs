@@ -8,14 +8,12 @@ use tauri::AppHandle;
 use crate::dir_util::get_data_dir;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct PythonStruct {
-    pub version: String,
-    pub next_version: String,
+pub struct PythonConfig {
+    pub default_version: String,
 }
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppConfig {
-    pub python: PythonStruct,
+    pub python: PythonConfig,
 }
 
 pub fn init_config(app: &AppHandle) -> Result<()> {
@@ -48,7 +46,7 @@ pub fn read_config(app: &AppHandle) -> Result<AppConfig> {
                 "Failed to parse config.json: {}. Trying to merge with default config.",
                 err
             );
-            let merged_config = merge_configs(&config);
+            let merged_config = merge_configs(&config)?;
             let config: AppConfig = serde_json::from_value(merged_config)
                 .expect("Failed to parse config even after merging with default config.");
 
@@ -62,14 +60,14 @@ pub fn read_config(app: &AppHandle) -> Result<AppConfig> {
     Ok(config)
 }
 
-fn merge_configs(config: &str) -> Value {
+fn merge_configs(config: &str) -> Result<Value> {
     let default_config_bytes = include_bytes!("../data/default-config.json");
-    let default_config: Value = serde_json::from_slice(default_config_bytes).unwrap();
-    let user_config: Value = serde_json::from_str(config).unwrap();
+    let default_config: Value = serde_json::from_slice(default_config_bytes)?;
+    let user_config: Value = serde_json::from_str(config)?;
     let mut merged_config = default_config;
     merge(&mut merged_config, user_config);
 
-    merged_config
+    Ok(merged_config)
 }
 
 fn merge(a: &mut Value, b: Value) {

@@ -1,10 +1,18 @@
 use anyhow::{anyhow, Context, Ok, Result};
-use std::fs;
-
+use pyo3::prelude::PyAnyMethods;
+use pyo3::Python;
+use std::{env, fs};
 use tauri::{AppHandle, Manager};
-use tauri_plugin_shell::ShellExt;
 
-use crate::{app_config::read_config, dir_util::get_local_data_dir};
+use crate::dir_util::get_data_dir;
+use crate::dir_util::get_local_data_dir;
+use tauri_plugin_shell::ShellExt;
+use toml_edit::DocumentMut;
+
+pub struct PythonStatus {
+    pub installed: bool,
+    pub version: Option<String>,
+}
 
 pub fn get_base_args(appdata_dir: &str) -> Vec<&str> {
     vec!["--directory", appdata_dir, "--no-cache"]
@@ -32,7 +40,26 @@ async fn run_uv(app: &AppHandle, args: Vec<&str>) -> Result<String> {
     Ok(String::from_utf8(output.stdout.clone())?)
 }
 
-pub fn check_python_installed(app: &AppHandle) -> Result<bool> {
+pub fn add_python_path_env(app: &AppHandle) -> Result<()> {
+    // PYTHONPATHとPYTHONHOMEの設定
+    let local_data_dir = get_local_data_dir(&app)?; // 環境ファイルがある
+    let resource_dir = app.path().resource_dir()?; // 本体がある
+    let appdata_dir = get_data_dir(&app)?; // ユーザーデータがある
+    let python_path = local_data_dir.join("python"); // pythonがある
+
+    env::set_var(
+        "PYTHONPATH",
+        env::join_paths([&python_path, &resource_dir, &appdata_dir])?,
+    );
+    env::set_var("PYTHONHOME", &python_path);
+    println!("Set PYTHONPATH and PYTHONHOME to {:?}", &python_path);
+
+    // Python::initialize();
+    // println!("Python interpreter initialized.");
+
+    Ok(())
+}
+pub async fn check_python_installed(app: &AppHandle) -> Result<PythonStatus> {
     // appdataのdir pathを取得
     let appdata_dir = get_local_data_dir(app)?;
     // python/bin/python(.exe)のpathを取得
@@ -43,11 +70,60 @@ pub fn check_python_installed(app: &AppHandle) -> Result<bool> {
     println!("Checking for Python at path: {:?}", python_path);
 
     // pythonが存在するか確認
-    if python_path.exists() {
-        println!("Python is already installed at {:?}", python_path);
-        return Ok(true);
+    if !python_path.exists() {
+        println!("Python executable not found at {:?}", python_path);
+        return Ok(PythonStatus {
+            installed: false,
+            version: None,
+        });
     }
-    Ok(false)
+
+    // pythonのversionを取得
+    // libpythonとvenv(uvが作った環境)のバージョンが全て合わなければCライブラリ系が読み込めないっぽい?
+    // https://github.com/axnsan12/drf-yasg/issues/362#issuecomment-515542184
+    let python_version = Python::attach(|py| -> Result<String> {
+        let sys = py.import("sys")?;
+        let version = sys.getattr("version_info")?;
+        let major: i32 = version.get_item(0)?.extract()?;
+        let minor: i32 = version.get_item(1)?.extract()?;
+        let micro: i32 = version.get_item(2)?.extract()?;
+        println!("Embed Python version: {}", sys.getattr("version")?);
+
+        Ok(format!("{}.{}.{}", major, minor, micro))
+    })?;
+
+    // インストールされているpythonのversionを取得
+    let installed_python_version = String::from_utf8(
+        app.shell()
+            .command(&python_path)
+            .args([
+                "-c",
+                "import sys; v=sys.version_info; print(f'{v[0]}.{v[1]}.{v[2]}')",
+            ])
+            .output()
+            .await?
+            .stdout,
+    )?;
+    let installed_python_version = installed_python_version.trim().to_string(); // 改行を削除
+
+    if installed_python_version != python_version {
+        println!(
+            "Python version mismatch: expected(embed libpython) {}, found(installed python) {}. Try reinstalling.",
+            python_version, installed_python_version
+        );
+        // ディレクトリ(.venv含む)を削除
+        fs::remove_dir_all(appdata_dir.join("python")).ok();
+        fs::remove_dir_all(appdata_dir.join(".venv")).ok();
+        return Ok(PythonStatus {
+            installed: false,
+            version: Some(python_version),
+        });
+    }
+
+    Ok(PythonStatus {
+        installed: true,
+        version: Some(python_version),
+    })
 }
 
 pub async fn install_packages(app: &AppHandle, packages: Vec<&str>) -> Result<()> {
@@ -73,34 +149,43 @@ pub async fn install_packages(app: &AppHandle, packages: Vec<&str>) -> Result<()
     Ok(())
 }
 
-pub async fn install_python(app: &AppHandle) -> Result<()> {
+pub async fn install_python(app: &AppHandle, python_version: &str) -> Result<()> {
     // appdataのdir pathを取得
     let appdata_path = get_local_data_dir(app)?;
     let appdata_dir = appdata_path
         .to_str()
         .context("Failed to convert appdata path to str")?;
-    let config = read_config(app).context("No config found, cannot install Python")?;
 
     // uv initをする
-    let python_version = format!(
-        ">={},<{}",
-        config.python.version, config.python.next_version
-    );
-    let mut args = vec![
-        "init",
-        "--python",
-        python_version.as_str(),
-        "--bare",
-        "--author-from",
-        "none",
-        "--name",
-        "aperio-env",
-    ];
-    args.extend(get_base_args(appdata_dir));
-    run_uv(app, args).await?;
+    // pyproject.tomlがあれば、手動で変更する
+    let python_version_str = format!("~={}", python_version);
+    let appdata_toml = appdata_path.join("pyproject.toml");
+    if appdata_toml.exists() {
+        let pj_data = fs::read_to_string(&appdata_toml)?;
+        let mut pj_data = pj_data.parse::<DocumentMut>()?;
+        pj_data["project"]["requires-python"] = toml_edit::value(&python_version_str);
+        fs::write(&appdata_toml, pj_data.to_string())?;
+        println!(
+            "Updated pyproject.toml with requires-python = {}",
+            &python_version_str
+        );
+    } else {
+        let mut args = vec![
+            "init",
+            "--python",
+            python_version_str.as_str(),
+            "--bare",
+            "--author-from",
+            "none",
+            "--name",
+            "aperio-env",
+        ];
+        args.extend(get_base_args(appdata_dir));
+        run_uv(app, args).await?;
+    }
 
     // uv python installコマンドを実行してpythonをインストール
-    args = vec![
+    let mut args = vec![
         "python",
         "install",
         "--no-bin",
@@ -108,7 +193,7 @@ pub async fn install_python(app: &AppHandle) -> Result<()> {
         appdata_dir,
         "--project",
         appdata_dir,
-        &config.python.version,
+        python_version,
     ];
     args.extend(get_base_args(appdata_dir));
     run_uv(app, args).await?;
@@ -144,7 +229,13 @@ pub async fn install_python(app: &AppHandle) -> Result<()> {
         .context("No opencv-python-headless wheel file found in resources/wheel")?;
 
     // uv addコマンドを実行してopencv-python-headlessをインストール
-    install_packages(app, vec![wheel_path.to_str().unwrap()]).await?;
+    install_packages(
+        app,
+        vec![wheel_path
+            .to_str()
+            .context("could not convert wheel path to str")?],
+    )
+    .await?;
     println!("Successfully installed Python and required packages");
 
     Ok(())

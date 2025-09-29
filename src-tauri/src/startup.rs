@@ -1,8 +1,15 @@
-use anyhow::Result;
-use pyo3::{types::PyAnyMethods, Python};
+use crate::app_config::read_config;
+use crate::stream::need_enough::connect_need_enough_data;
+use crate::stream::new_sample::connect_new_sample;
+use crate::stream::pipeline::initialize_pipeline;
+use crate::{app_config, python};
+use anyhow::{Context, Result};
+use glib::object::Cast;
+use gst::prelude::GstBinExt;
+use gst_app::{AppSink, AppSrc};
+use std::sync::Arc;
 use tauri::App;
-
-use crate::{app_config, dir_util::get_local_data_dir, python};
+use tokio::sync::broadcast;
 
 pub fn startup(app: &App) -> Result<()> {
     tauri::async_runtime::block_on(async move {
@@ -10,39 +17,57 @@ pub fn startup(app: &App) -> Result<()> {
 
         // configの初期化
         app_config::init_config(&app_handle)?;
+        let config = read_config(&app_handle)?;
+        let default_version = config.python.default_version;
+
+        // python環境変数の設定
+        python::utils::add_python_path_env(&app_handle)?;
 
         // pythonがインストールされているか確認
-        if !python::utils::check_python_installed(&app_handle)? {
+        let mut result = python::utils::check_python_installed(&app_handle).await?;
+        let mut try_count = 0;
+        while !result.installed && try_count < 3 {
             println!("Python is not installed. Installing...");
-            let python_installed = python::utils::install_python(&app_handle).await;
+            let python_installed = python::utils::install_python(
+                &app_handle,
+                &result.version.unwrap_or(default_version.clone()),
+            )
+            .await;
             println!("Python installed: {:?}", python_installed);
-        } else {
-            println!("syncing packages...");
-            let sync_result = python::utils::sync_packages(&app_handle).await;
-            println!("Package sync result: {:?}", sync_result);
+            result = python::utils::check_python_installed(&app_handle).await?;
+            try_count += 1;
         }
 
-        // PYTHONPATHとPYTHONHOMEの設定
-        let appdata_dir = get_local_data_dir(&app_handle)?;
-        let python_path = appdata_dir.join("python");
+        println!("Installed python version: {:?}", result.version);
 
-        std::env::set_var("PYTHONPATH", &python_path);
-        std::env::set_var("PYTHONHOME", &python_path);
-        println!("Set PYTHONPATH and PYTHONHOME to {:?}", &python_path);
+        println!("syncing packages...");
+        let sync_result = python::utils::sync_packages(&app_handle).await;
+        println!("Package sync result: {:?}", sync_result);
 
-        Python::initialize();
-        println!("Python interpreter initialized.");
+        // python環境の初期化
+        python::initialize::initialize_python(app_handle.clone())?;
 
-        // printテスト
-        Python::attach(|py| {
-            let sys = py.import("sys").expect("Failed to import sys module");
-            let version: String = sys
-                .getattr("version")
-                .expect("Failed to get version")
-                .extract()
-                .expect("Failed to extract version");
-            println!("Python version: {}", version);
-        });
+        let (tx, _) = broadcast::channel::<Arc<Vec<u8>>>(1000000);
+        let pipeline = initialize_pipeline(&tx).await?;
+
+        // srcの設定
+        let src = pipeline
+            .by_name("src")
+            .context("Source element not found in the pipeline")?;
+        let appsrc = src
+            .dynamic_cast::<AppSrc>()
+            .expect("Source element is expected to be an appsrc!");
+
+        // appsinkのシグナルハンドラを設定
+        let sink = pipeline
+            .by_name("ws_sink")
+            .context("Sink element not found in the pipeline")?;
+        let appsink = sink
+            .dynamic_cast::<AppSink>()
+            .expect("Sink element is expected to be an appsink!");
+
+        connect_need_enough_data(appsrc);
+        connect_new_sample(appsink, &tx);
 
         Ok(())
     })

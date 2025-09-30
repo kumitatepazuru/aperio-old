@@ -52,10 +52,8 @@ pub fn add_python_path_env(app: &AppHandle) -> Result<()> {
         env::join_paths([&python_path, &resource_dir, &appdata_dir])?,
     );
     env::set_var("PYTHONHOME", &python_path);
+    env::set_var("UV_PROJECT_ENVIRONMENT", &python_path);
     println!("Set PYTHONPATH and PYTHONHOME to {:?}", &python_path);
-
-    // Python::initialize();
-    // println!("Python interpreter initialized.");
 
     Ok(())
 }
@@ -111,9 +109,8 @@ pub async fn check_python_installed(app: &AppHandle) -> Result<PythonStatus> {
             "Python version mismatch: expected(embed libpython) {}, found(installed python) {}. Try reinstalling.",
             python_version, installed_python_version
         );
-        // ディレクトリ(.venv含む)を削除
+        // ディレクトリを削除
         fs::remove_dir_all(appdata_dir.join("python")).ok();
-        fs::remove_dir_all(appdata_dir.join(".venv")).ok();
         return Ok(PythonStatus {
             installed: false,
             version: Some(python_version),

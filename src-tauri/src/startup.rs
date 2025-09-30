@@ -20,10 +20,9 @@ pub fn startup(app: &App) -> Result<()> {
         let config = read_config(&app_handle)?;
         let default_version = config.python.default_version;
 
+        // pythonがインストールされているか確認
         // python環境変数の設定
         python::utils::add_python_path_env(&app_handle)?;
-
-        // pythonがインストールされているか確認
         let mut result = python::utils::check_python_installed(&app_handle).await?;
         let mut try_count = 0;
         while !result.installed && try_count < 3 {

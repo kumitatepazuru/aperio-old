@@ -4,8 +4,8 @@ import os.path
 import shutil
 from typing import Callable
 
-from .plugin_base.generator_base import ObjectGeneratorBase, FilterGeneratorBase
-from .plugin_base.plugin_base import MainPluginBase, SubPluginBase
+from .plugin_base import MainPluginBase, SubPluginBase
+from .plugin_base.generator_base import FilterGeneratorBase, ObjectGeneratorBase
 
 
 class PluginManager:
@@ -96,6 +96,18 @@ class PluginManager:
             self.filter_plugins[plugin.name] = plugin
         else:
             raise TypeError("The plugin must be a subclass of ObjectGeneratorBase or FilterGeneratorBase")
+
+    def check_plugin_exists(self, plugin_name: str) -> bool:
+        """
+        指定された名前のプラグインが存在するかどうかを確認するメソッド。
+
+        Args:
+            plugin_name (str): 確認するプラグインの名前
+
+        Returns:
+            bool: プラグインが存在する場合はTrue、存在しない場合はFalse
+        """
+        return plugin_name in self.plugins
 
     def add_plugin(self, plugin_dir: str) -> bool:
         """

@@ -43,7 +43,8 @@
     "resources": {
       "binaries/wheels/": "wheels/",
       "binaries/*": "",
-      "../src-python/": "plmanager/"
+      "../src-python/src/": "plmanager/",
+      "../plugins/": "default-plugins/"
     }
   }
 }

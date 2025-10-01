@@ -22,3 +22,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+src-python/out/aperio_plugin_stubs.egg-info

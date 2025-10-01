@@ -1,0 +1,43 @@
+import numpy as np
+from . import SubPluginBase as SubPluginBase
+
+class ObjectGeneratorBase(SubPluginBase):
+    """
+    オブジェクトを生成するための基底クラス。 サブクラスでオーバーライドして使用することを想定している。
+    オブジェクトは前提となる映像データがないため、生成時に必要な情報はオブジェクト自体の引数のみになる。
+    """
+    def __init__(self) -> None:
+        """
+        フレーム生成プラグインの初期化を行う。必要に応じてサブクラスでオーバーライドする。
+        """
+    def generate_frame(self, obj_args: dict) -> np.ndarray:
+        """
+        フレームを生成するメソッド。サブクラスで必ずオーバーライドする必要がある。
+
+        Args:
+            obj_args (dict): オブジェクト生成に必要な引数群
+
+        Returns:
+            dict: 生成されたフレームデータ
+        """
+
+class FilterGeneratorBase(SubPluginBase):
+    """
+    フィルターを適用してフレームを生成するための基底クラス。 サブクラスでオーバーライドして使用することを想定している。
+    フィルターは前提となる映像データが必要なため、生成時に元のフレームデータを引数として受け取る。
+    """
+    def __init__(self) -> None:
+        """
+        フィルター生成プラグインの初期化を行う。必要に応じてサブクラスでオーバーライドする。
+        """
+    def generate_frame(self, frame: np.ndarray, filter_args: dict) -> np.ndarray:
+        """
+        フレームを生成するメソッド。サブクラスで必ずオーバーライドする必要がある。
+
+        Args:
+            frame (np.ndarray): 元のフレームデータ
+            filter_args (dict): フィルター適用に必要な引数群
+
+        Returns:
+            dict: 生成されたフレームデータ
+        """

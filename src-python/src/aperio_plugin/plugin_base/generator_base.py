@@ -1,6 +1,6 @@
 import numpy as np
 
-from .plugin_base import SubPluginBase
+from . import SubPluginBase
 
 
 class ObjectGeneratorBase(SubPluginBase):

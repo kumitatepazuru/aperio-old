@@ -43,7 +43,7 @@ async fn run_uv(app: &AppHandle, args: Vec<&str>) -> Result<String> {
 pub fn add_python_path_env(app: &AppHandle) -> Result<()> {
     // PYTHONPATHとPYTHONHOMEの設定
     let local_data_dir = get_local_data_dir(&app)?; // 環境ファイルがある
-    let resource_dir = app.path().resource_dir()?; // 本体がある
+    let resource_dir = app.path().resource_dir()?.join("plmanager"); // プラグインマネージャーがある
     let appdata_dir = get_data_dir(&app)?; // ユーザーデータがある
     let python_path = local_data_dir.join("python"); // pythonがある
 
@@ -102,7 +102,7 @@ pub async fn check_python_installed(app: &AppHandle) -> Result<PythonStatus> {
             .await?
             .stdout,
     )?;
-    let installed_python_version = installed_python_version.trim().to_string(); // 改行を削除
+    let installed_python_version = installed_python_version.trim(); // 改行を削除
 
     if installed_python_version != python_version {
         println!(
@@ -146,7 +146,7 @@ pub async fn install_packages(app: &AppHandle, packages: Vec<&str>) -> Result<()
     Ok(())
 }
 
-pub async fn install_python(app: &AppHandle, python_version: &str) -> Result<()> {
+pub async fn install_python(app: &AppHandle, python_version: &str, is_vague: bool) -> Result<()> {
     // appdataのdir pathを取得
     let appdata_path = get_local_data_dir(app)?;
     let appdata_dir = appdata_path
@@ -155,7 +155,13 @@ pub async fn install_python(app: &AppHandle, python_version: &str) -> Result<()>
 
     // uv initをする
     // pyproject.tomlがあれば、手動で変更する
-    let python_version_str = format!("~={}", python_version);
+    let python_version_str = if is_vague {
+        // vagueなら~=をつける
+        format!("~={}", python_version)
+    } else {
+        format!("=={}", python_version)
+    };
+
     let appdata_toml = appdata_path.join("pyproject.toml");
     if appdata_toml.exists() {
         let pj_data = fs::read_to_string(&appdata_toml)?;
@@ -170,7 +176,7 @@ pub async fn install_python(app: &AppHandle, python_version: &str) -> Result<()>
         let mut args = vec![
             "init",
             "--python",
-            python_version_str.as_str(),
+            &python_version_str,
             "--bare",
             "--author-from",
             "none",
@@ -190,7 +196,7 @@ pub async fn install_python(app: &AppHandle, python_version: &str) -> Result<()>
         appdata_dir,
         "--project",
         appdata_dir,
-        python_version,
+        &python_version_str,
     ];
     args.extend(get_base_args(appdata_dir));
     run_uv(app, args).await?;

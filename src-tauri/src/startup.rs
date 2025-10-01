@@ -29,7 +29,8 @@ pub fn startup(app: &App) -> Result<()> {
             println!("Python is not installed. Installing...");
             let python_installed = python::utils::install_python(
                 &app_handle,
-                &result.version.unwrap_or(default_version.clone()),
+                result.version.as_ref().unwrap_or(&default_version),
+                result.version.is_none(),
             )
             .await;
             println!("Python installed: {:?}", python_installed);

@@ -33,3 +33,4 @@ gstreamer-app = "0.24.2"
 tokio = { version = "1.47.1", features = ["macros"] }
 glib = "0.21.3"
 toml_edit = "0.23.6"
+numpy = "0.26.0"

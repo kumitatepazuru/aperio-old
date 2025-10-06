@@ -1,16 +1,16 @@
 use crate::dir_util::get_data_dir;
 use anyhow::Result;
 use pyo3::prelude::PyAnyMethods;
-use pyo3::{PyResult, Python};
+use pyo3::{Py, PyAny, PyErr, Python};
 use tauri::{AppHandle, Manager};
 
-pub fn initialize_python(app: AppHandle) -> Result<()> {
+pub fn initialize_python(app: AppHandle) -> Result<Py<PyAny>> {
     let appdata_dir = get_data_dir(&app)?;
     let resource_dir = app.path().resource_dir()?;
     let base_plugin_dir = resource_dir.join("default-plugins").join("base");
 
     // Pythonのプラグインシステムを初期化
-    Python::attach(|py| -> PyResult<()> {
+    let pl_manager = Python::attach(|py| {
         // pythonのversionを取得
         let sys = py.import("sys")?;
 
@@ -32,8 +32,9 @@ pub fn initialize_python(app: AppHandle) -> Result<()> {
             let add_plugin_func = pl_manager.getattr("add_plugin")?;
             add_plugin_func.call1((base_plugin_dir.to_str(),))?;
         }
-        Ok(())
+
+        Ok::<Py<PyAny>, PyErr>(pl_manager.unbind())
     })?;
 
-    Ok(())
+    Ok(pl_manager)
 }

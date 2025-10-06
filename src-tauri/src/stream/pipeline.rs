@@ -18,13 +18,15 @@ pub async fn initialize_pipeline(tx: &Sender<Arc<Vec<u8>>>) -> Result<Pipeline> 
 
     // テストソースのパイプラインを作成
     let pipeline = gst::parse::launch(
-        "appsrc name=src is-live=true block=true emit-signals=true !
-        queue2 name=q max-size-buffers=300 low-watermark=0.2 high-watermark=0.8 !
-        video/x-raw,format=I420,framerate=60/1,width=1920,height=1080 !
+        "appsrc name=src is-live=false block=true format=time !
+        video/x-raw,format=BGR,width=1920,height=1080 !
+        queue name=q max-size-buffers=1000 max-size-bytes=0 max-size-time=0 !
+        videoconvert !
+        video/x-raw,format=Y444 !
         x264enc pass=quant quantizer=0 key-int-max=60 byte-stream=true !
         h264parse name=h264parse config-interval=1 !
-        video/x-h264,parsed=true,stream-format=byte-stream,alignment=au,parsed=true !
-        appsink name=ws_sink emit-signals=true",
+        video/x-h264,framerate=30/1,parsed=true,stream-format=byte-stream,alignment=au,parsed=true !
+        appsink name=ws_sink emit-signals=true emit-signals=true sync=true",
     )?
     .dynamic_cast::<Pipeline>()
     .unwrap();

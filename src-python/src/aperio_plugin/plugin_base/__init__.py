@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .. import PluginManager
-    
+
 
 class PluginBase:
     """
@@ -18,6 +18,13 @@ class PluginBase:
         self.name = "BasePlugin"
         self.display_name = "Base Plugin"
         self.description = "This is a base plugin class."
+
+    def get_display_info(self) -> str:
+        """
+        プラグインの情報を表示用フォーマットで返却するメソッド。必要に応じてサブクラスでオーバーライドする。
+        """
+
+        return f"{self.display_name}\n\t{self.description}"
 
 
 class SubPluginBase(PluginBase):
@@ -43,3 +50,10 @@ class MainPluginBase(PluginBase):
         self.version = "0.1.0"
         self.author = "Your Name"
         self.manager = manager
+
+    def get_display_info(self) -> str:
+        """
+        プラグインの情報を表示用フォーマットで返却するメソッド。必要に応じてサブクラスでオーバーライドする。
+        """
+
+        return f"{self.display_name} v{self.version} by {self.author}\n\t{self.description}"

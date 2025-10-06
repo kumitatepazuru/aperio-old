@@ -12,6 +12,10 @@ class PluginBase:
         """
         プラグインの初期化を行う。必要に応じてサブクラスでオーバーライドする。
         """
+    def get_display_info(self) -> str:
+        """
+        プラグインの情報を表示用フォーマットで返却するメソッド。必要に応じてサブクラスでオーバーライドする。
+        """
 
 class SubPluginBase(PluginBase):
     """
@@ -29,4 +33,8 @@ class MainPluginBase(PluginBase):
     def __init__(self, manager: PluginManager) -> None:
         """
         プラグインの初期化を行う。必要に応じてサブクラスでオーバーライドする。
+        """
+    def get_display_info(self) -> str:
+        """
+        プラグインの情報を表示用フォーマットで返却するメソッド。必要に応じてサブクラスでオーバーライドする。
         """

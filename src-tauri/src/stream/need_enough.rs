@@ -1,61 +1,91 @@
-use glib::object::ObjectExt;
+use gst::prelude::ElementExtManual;
+use gst::{Buffer, ClockTime};
 use gst_app::AppSrc;
+use numpy::{PyArray3, PyArrayMethods};
+use pyo3::prelude::PyAnyMethods;
+use pyo3::types::{PyDict, PyList};
+use pyo3::{Py, PyAny, PyErr, Python};
 use std::sync::{Arc, Mutex};
+use std::thread;
 
-pub fn connect_need_enough_data(appsrc: AppSrc) {
-    // アイドルコールバックのソースIDを保持するための状態
-    let source_id: Arc<Mutex<Option<glib::SourceId>>> = Arc::new(Mutex::new(None));
+pub fn connect_need_enough_data(appsrc: AppSrc, pl_manager: Py<PyAny>) {
+    // pl_managerをスレッド間で共有できるようにArcとMutexでラップ
+    let pl_manager = Arc::new(Mutex::new(pl_manager));
+    let framerate = 60; // 30fps
+    let frame_duration = ClockTime::SECOND / framerate;
+    let frame_count = Arc::new(Mutex::new(0u64));
 
-    // connect need dataでデータ供給を開始
-    let appsrc_clone_for_need_data = appsrc.clone();
-    let source_id_clone_for_need_data = source_id.clone();
-    appsrc.connect("need-data", false, move |_args| {
-        let mut source_id_guard = source_id_clone_for_need_data.lock().unwrap();
-
-        // すでにソースが登録済み(idがある場合)の場合は何もしない
-        if source_id_guard.is_some() {
-            return Some(gst::FlowReturn::Ok.into());
-        }
-
-        println!("need-data: Starting data feed.");
-        let appsrc_in_idle = appsrc_clone_for_need_data.clone();
-        let mut frame_count = 0; // フレームカウンタ
-
-        // アイドルコールバックをメインループに登録
-        let id = glib::idle_add_local(move || {
-            frame_count += 1;
-            println!("Idle callback: Pushing frame {}", frame_count);
-
+    thread::spawn(move || {
+        loop {
             // ここでピクセルデータからGStreamerのバッファを作成する
-            // let buffer = create_pixel_data_buffer();
+            // PythonのPluginManagerを使ってフレームデータを取得
+            let buffer = Python::attach(|py| -> Result<Vec<u8>, PyErr> {
+                let pl_manager = pl_manager.lock().unwrap();
+                let pl_manager = pl_manager.bind(py);
 
-            // appsrcにバッファをプッシュ
-            // if let Err(err) = appsrc_in_idle.push_buffer(buffer) {
-            //     // フローがFlushingなど、予期されるエラーの場合は停止
-            //     if err == gst::FlowError::Flushing {
-            //         return glib::ControlFlow::Break;
-            //     }
-            // }
+                let layer_struct = PyDict::new(py);
+                layer_struct.set_item("x", 0)?;
+                layer_struct.set_item("y", 0)?;
+                layer_struct.set_item("channels", 3)?;
+                layer_struct.set_item("obj_base", "TestObject")?;
 
-            // コールバックを継続
-            glib::ControlFlow::Continue
-        });
-        // 登録したソースのIDを保存
-        *source_id_guard = Some(id);
+                let obj_parameters = PyDict::new(py);
+                layer_struct.set_item("obj_parameters", obj_parameters)?;
 
-        Some(gst::FlowReturn::Ok.into())
-    });
+                let effects_list: Vec<i32> = vec![];
+                let effects = PyList::new(py, effects_list)?;
+                layer_struct.set_item("effects", effects)?;
 
-    // `enough-data` シグナル用のクロージャ
-    let source_id_clone_for_enough_data = source_id.clone();
-    appsrc.connect("enough_data", false, move |_appsrc| {
-        let mut source_id_guard = source_id_clone_for_enough_data.lock().unwrap();
-        // 登録されているアイドルコールバックを削除する
-        if let Some(id) = source_id_guard.take() {
-            println!("enough-data: Stopping data feed.");
-            id.remove();
+                let frame_struct = PyList::new(py, vec![layer_struct])?;
+
+                let make_frame_func = pl_manager.getattr("make_frame")?;
+                let frame_data = make_frame_func
+                    .call1((frame_struct, 1920, 1080))?
+                    .cast_into::<PyArray3<u8>>()?;
+                let readonly_frame_data = frame_data.readonly();
+                let slice_data = readonly_frame_data.as_slice()?;
+
+                Ok(slice_data.to_vec()) // 参照なのでそのまま返せない コピーが発生するのがつらい
+            })
+            .expect("couldn't make frame buffer");
+
+            // 取得したフレームデータからGStreamerのバッファを作成
+            let mut count = frame_count.lock().unwrap();
+            let mut buffer = Buffer::from_slice(buffer);
+            {
+                let buffer_mut = buffer.get_mut().expect("Failed to get mutable buffer");
+                let pts = *count * frame_duration;
+
+                buffer_mut.set_pts(pts);
+                // DTS (Decoding Timestamp)も設定することが推奨される
+                buffer_mut.set_dts(pts);
+                buffer_mut.set_duration(frame_duration);
+            }
+
+            match appsrc.push_buffer(buffer) {
+                Ok(_) => {
+                    // 成功
+                    *count += 1;
+                    if *count % 30 == 0 {
+                        println!("Pushed {} frames", *count);
+                        println!(
+                            "running: {}",
+                            appsrc
+                                .current_running_time()
+                                .expect("could not get current running time")
+                                / frame_duration
+                        );
+                    }
+                }
+                Err(gst::FlowError::Flushing) => {
+                    // パイプラインがフラッシュ中の場合警告
+                    println!("Pipeline is flushing!");
+                }
+                Err(e) => {
+                    eprintln!("Error pushing buffer: {:?}", e);
+                    break;
+                }
+            }
         }
-
-        Some(gst::FlowReturn::Ok.into())
     });
 }

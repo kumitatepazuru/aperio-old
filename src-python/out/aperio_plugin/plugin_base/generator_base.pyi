@@ -1,5 +1,6 @@
 import numpy as np
 from . import SubPluginBase as SubPluginBase
+from typing import Literal
 
 class ObjectGeneratorBase(SubPluginBase):
     """
@@ -10,12 +11,13 @@ class ObjectGeneratorBase(SubPluginBase):
         """
         フレーム生成プラグインの初期化を行う。必要に応じてサブクラスでオーバーライドする。
         """
-    def generate_frame(self, obj_args: dict) -> np.ndarray:
+    def generate(self, obj_args: dict, shape: tuple[int, int, Literal[1, 3, 4]]) -> np.ndarray:
         """
         フレームを生成するメソッド。サブクラスで必ずオーバーライドする必要がある。
 
         Args:
             obj_args (dict): オブジェクト生成に必要な引数群
+            shape (tuple[int]): 生成するフレームの形状 [height, width, channels]
 
         Returns:
             dict: 生成されたフレームデータ
@@ -30,7 +32,7 @@ class FilterGeneratorBase(SubPluginBase):
         """
         フィルター生成プラグインの初期化を行う。必要に応じてサブクラスでオーバーライドする。
         """
-    def generate_frame(self, frame: np.ndarray, filter_args: dict) -> np.ndarray:
+    def generate(self, frame: np.ndarray, filter_args: dict) -> np.ndarray:
         """
         フレームを生成するメソッド。サブクラスで必ずオーバーライドする必要がある。
 

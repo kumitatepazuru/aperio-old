@@ -5,7 +5,8 @@ use crate::stream::pipeline::initialize_pipeline;
 use crate::{app_config, python};
 use anyhow::{Context, Result};
 use glib::object::Cast;
-use gst::prelude::GstBinExt;
+use gst::prelude::{ElementExt, GstBinExt};
+use gst::State;
 use gst_app::{AppSink, AppSrc};
 use std::sync::Arc;
 use tauri::App;
@@ -45,7 +46,7 @@ pub fn startup(app: &App) -> Result<()> {
         println!("Package sync result: {:?}", sync_result);
 
         // python環境の初期化
-        python::initialize::initialize_python(app_handle.clone())?;
+        let pl_manager = python::initialize::initialize_python(app_handle.clone())?;
 
         let (tx, _) = broadcast::channel::<Arc<Vec<u8>>>(1000000);
         let pipeline = initialize_pipeline(&tx).await?;
@@ -58,6 +59,11 @@ pub fn startup(app: &App) -> Result<()> {
             .dynamic_cast::<AppSrc>()
             .expect("Source element is expected to be an appsrc!");
 
+        // queueの設定
+        // let queue = pipeline
+        //     .by_name("q")
+        //     .context("Queue element not found in the pipeline")?;
+
         // appsinkのシグナルハンドラを設定
         let sink = pipeline
             .by_name("ws_sink")
@@ -66,8 +72,10 @@ pub fn startup(app: &App) -> Result<()> {
             .dynamic_cast::<AppSink>()
             .expect("Sink element is expected to be an appsink!");
 
-        connect_need_enough_data(appsrc);
+        connect_need_enough_data(appsrc, pl_manager);
         connect_new_sample(appsink, &tx);
+
+        pipeline.set_state(State::Playing)?;
 
         Ok(())
     })

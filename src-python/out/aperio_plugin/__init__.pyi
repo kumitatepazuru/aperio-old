@@ -1,5 +1,7 @@
+import numpy as np
 from .plugin_base import MainPluginBase, SubPluginBase
 from .plugin_base.generator_base import FilterGeneratorBase, ObjectGeneratorBase
+from .types.frame_structure import LayerStructure as LayerStructure
 from _typeshed import Incomplete
 from typing import Callable
 
@@ -49,6 +51,16 @@ class PluginManager:
         Args:
             plugin (SubPluginBase): 登録するサブプラグインのインスタンス
         """
+    def check_plugin_exists(self, plugin_name: str) -> bool:
+        """
+        指定された名前のプラグインが存在するかどうかを確認するメソッド。
+
+        Args:
+            plugin_name (str): 確認するプラグインの名前
+
+        Returns:
+            bool: プラグインが存在する場合はTrue、存在しない場合はFalse
+        """
     def add_plugin(self, plugin_dir: str) -> bool:
         """
         プラグインを追加するメソッド。
@@ -59,4 +71,16 @@ class PluginManager:
 
         Returns:
             bool: プラグインが正常に追加または更新された場合はTrue、それ以外の場合はFalse
+        """
+    def make_frame(self, frame_structure: list[LayerStructure], width: int, height: int) -> np.ndarray:
+        """
+        指定されたフレーム構造に基づいてフレームを生成するメソッド。
+
+        Args:
+            frame_structure (list[LayerStructure]): フレーム構造のリスト
+            width (int): フレームの幅
+            height (int): フレームの高さ
+
+        Returns:
+            生成されたフレームオブジェクト
         """

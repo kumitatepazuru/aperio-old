@@ -4,8 +4,12 @@ import os.path
 import shutil
 from typing import Callable
 
+import cv2
+import numpy as np
+
 from .plugin_base import MainPluginBase, SubPluginBase
 from .plugin_base.generator_base import FilterGeneratorBase, ObjectGeneratorBase
+from .types.frame_structure import LayerStructure
 
 
 class PluginManager:
@@ -52,13 +56,31 @@ class PluginManager:
                 continue
             __import__(f"{self.plugin_dir_name}.{plugin_name}")
 
-        for name, plugin_cls in self.__plugins.items():
-            plugin_instance = plugin_cls(self)
-            self.plugins[name] = plugin_instance
+        self.__load_plugins()
 
-        print("Loaded Plugins:")
-        print("\n".join(list(map(lambda n: f"{n[0]}(Object): {n[1].get_info()}", self.object_plugins.items()))))
-        print("\n".join(list(map(lambda n: f"{n[0]}(Filter): {n[1].get_info()}", self.filter_plugins.items()))))
+    def __load_plugins(self):
+        """
+        登録されたプラグインのクラスからインスタンスを生成し、self.pluginsに格納するメソッド。
+        既に同じ名前のプラグインが存在する場合はスキップする。
+        """
+
+        for name, plugin_cls in self.__plugins.items():
+            if name in self.plugins:
+                print(f"INFO: Plugin {name} is already registered. Skipping.")
+                continue  # 既に登録されている場合はスキップ
+
+            try:
+                plugin_instance = plugin_cls(self)  # PluginManagerのインスタンスを渡す
+                self.plugins[name] = plugin_instance
+                print(f"Registered plugin: {plugin_instance.name}")
+            except Exception as e:
+                print(f"Failed to load plugin {name}: {e}")
+
+            print("Loaded Plugins ---")
+            print("\n".join(
+                list(map(lambda n: f"{n[0]}(Object)- {n[1].get_display_info()}", self.object_plugins.items()))))
+            print("\n".join(
+                list(map(lambda n: f"{n[0]}(Filter)- {n[1].get_display_info()}", self.filter_plugins.items()))))
 
     @classmethod
     def plugin(cls, func: type[MainPluginBase]) -> Callable:
@@ -144,5 +166,106 @@ class PluginManager:
                         return True
 
         shutil.copytree(plugin_dir, f"{self.data_dir}/{self.plugin_dir_name}/{plugin_name}", dirs_exist_ok=True)
+
+        # プラグインを再読み込みして登録する
+        if not os.path.exists(f"{self.data_dir}/{self.plugin_dir_name}/{plugin_name}/__init__.py"):
+            print(f"Plugin {plugin_name} does not have an __init__.py file after copying. Skipping.")
+            return False
+        __import__(f"{self.plugin_dir_name}.{plugin_name}")
         print(f"Plugin {plugin_name} has been added/updated.")
+
+        self.__load_plugins()
         return True
+
+    def make_frame(self, frame_structure: list[LayerStructure], width: int, height: int) -> np.ndarray:
+        """
+        指定されたフレーム構造に基づいてフレームを生成するメソッド。
+
+        Args:
+            frame_structure (list[LayerStructure]): フレーム構造のリスト
+            width (int): フレームの幅
+            height (int): フレームの高さ
+
+        Returns:
+            生成されたフレームオブジェクト
+        """
+
+        try:
+            if not isinstance(frame_structure, list):
+                raise TypeError("frame_structure must be a list of LayerStructure")
+            if not all(isinstance(layer, dict) for layer in frame_structure):
+                raise TypeError("Each layer in frame_structure must be a LayerStructure")
+            if not isinstance(width, int) or not isinstance(height, int):
+                raise TypeError("width and height must be integers")
+            if width <= 0 or height <= 0:
+                raise ValueError("width and height must be positive integers")
+            if len(frame_structure) == 0:
+                raise ValueError("frame_structure must contain at least one layer")
+            if not all((layer["channels"] == 4 or layer["channels"] == 3 or layer["channels"] == 1)
+                       for layer in frame_structure):
+                raise ValueError("channels must be 1 (grayscale), 3 (RGB), or 4 (RGBA)")
+
+            # 最終的なフレームを保持する配列を初期化 (RGB)
+            final_frame = np.zeros((height, width, 3), dtype=np.uint8)
+            for layer in frame_structure:
+                if layer["obj_base"] not in self.object_plugins:
+                    raise ValueError(f"Object plugin {layer['obj_base']} is not registered")
+
+                obj_plugin = self.object_plugins[layer["obj_base"]]
+                layer_frame = obj_plugin.generate(layer["obj_parameters"], (height, width, layer["channels"]))
+                if layer_frame.shape != (height, width, layer["channels"]):
+                    raise ValueError(f"Generated frame shape {layer_frame.shape} does not match "
+                                     f"expected shape {(height, width, layer['channels'])}")
+
+                # layer_frameに対してエフェクトを順に適用
+                for effect in layer["effects"]:
+                    if effect["name"] not in self.filter_plugins:
+                        raise ValueError(f"Filter plugin {effect['name']} is not registered")
+
+                    filter_plugin = self.filter_plugins[effect["name"]]
+                    layer_frame = filter_plugin.generate(layer_frame, effect["parameters"])
+                    if layer_frame.shape != (height, width, layer["channels"]):
+                        raise ValueError(f"After applying filter {effect['name']}, frame shape {layer_frame.shape} "
+                                         f"does not match expected shape {(height, width, layer['channels'])}")
+
+                # OpenCVでレイヤーを最終フレームに重ねる
+                # TODO: ブレンディングもプラグイン化できるように
+                x, y = layer["x"], layer["y"]
+                layer_width, layer_height = layer_frame.shape[1], layer_frame.shape[0]
+
+                # フレーム外にはみ出している部分を切り取る
+                if x < 0:
+                    layer_frame = layer_frame[:, -x:, :]
+                    x = 0
+                if y < 0:
+                    layer_frame = layer_frame[-y:, :, :]
+                    y = 0
+                if x + layer_width > width:
+                    layer_frame = layer_frame[:, :width - x, :]
+                if y + layer_height > height:
+                    layer_frame = layer_frame[:height - y, :, :]
+                if layer_height <= 0 or layer_width <= 0:
+                    continue  # レイヤーがフレーム外にはみ出している場合はスキップ
+
+                # レイヤーのチャンネル数に応じて処理を分岐
+                if layer["channels"] == 1:
+                    # グレースケールの場合、3チャンネルに変換してから重ねる
+                    gray_layer = cv2.cvtColor(layer_frame, cv2.COLOR_GRAY2BGR)
+                    final_frame[y:y + layer_height, x:x + layer_width] = gray_layer
+                elif layer["channels"] == 3:
+                    # RGBの場合、そのまま重ねる
+                    final_frame[y:y + layer_height, x:x + layer_width] = layer_frame
+                elif layer["channels"] == 4:
+                    # RGBAの場合、アルファチャンネルを考慮して重ねる
+                    alpha_channel = layer_frame[:, :, 3] / 255.0
+                    for c in range(3):  # RGB各チャンネルに対して処理
+                        final_frame[y:y + layer_height, x:x + layer_width, c] = (
+                                alpha_channel * layer_frame[:, :, c] +
+                                (1 - alpha_channel) * final_frame[y:y + layer_height, x:x + layer_width, c]
+                        )
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            raise RuntimeError(f"Failed to make frame: {e}")
+
+        return final_frame

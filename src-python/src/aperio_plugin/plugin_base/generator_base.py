@@ -1,3 +1,5 @@
+from typing import Literal
+
 import numpy as np
 
 from . import SubPluginBase
@@ -15,12 +17,13 @@ class ObjectGeneratorBase(SubPluginBase):
         """
         super().__init__()
 
-    def generate_frame(self, obj_args: dict) -> np.ndarray:
+    def generate(self, obj_args: dict, shape: tuple[int, int, Literal[1, 3, 4]]) -> np.ndarray:
         """
         フレームを生成するメソッド。サブクラスで必ずオーバーライドする必要がある。
 
         Args:
             obj_args (dict): オブジェクト生成に必要な引数群
+            shape (tuple[int]): 生成するフレームの形状 [height, width, channels]
 
         Returns:
             dict: 生成されたフレームデータ
@@ -40,7 +43,7 @@ class FilterGeneratorBase(SubPluginBase):
         """
         super().__init__()
 
-    def generate_frame(self, frame: np.ndarray, filter_args: dict) -> np.ndarray:
+    def generate(self, frame: np.ndarray, filter_args: dict) -> np.ndarray:
         """
         フレームを生成するメソッド。サブクラスで必ずオーバーライドする必要がある。
 

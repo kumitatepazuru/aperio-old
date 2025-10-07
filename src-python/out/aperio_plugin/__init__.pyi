@@ -72,15 +72,28 @@ class PluginManager:
         Returns:
             bool: プラグインが正常に追加または更新された場合はTrue、それ以外の場合はFalse
         """
-    def make_frame(self, frame_structure: list[LayerStructure], width: int, height: int) -> np.ndarray:
+    def make_frame(self, frame_number: int, frame_structure: list[LayerStructure], width: int, height: int) -> np.ndarray:
         """
         指定されたフレーム構造に基づいてフレームを生成するメソッド。
 
         Args:
+            frame_number (int): 生成するフレームの番号 (現在は未使用)
             frame_structure (list[LayerStructure]): フレーム構造のリスト
             width (int): フレームの幅
             height (int): フレームの高さ
 
         Returns:
             生成されたフレームオブジェクト
+        """
+    def make_frames(self, amount: int, *args, **kwargs):
+        """
+        指定された数だけフレームをmultithreadingで生成するメソッド。make_frameと同じ引数を受け取り、amountで指定された数だけフレームを生成してリストで返す。
+
+        Args:
+            amount (int): 生成するフレームの数
+            *args: make_frameに渡す引数
+            **kwargs: make_frameに渡すキーワード引数
+
+        Returns:
+            list[np.ndarray]: 生成されたフレームのリスト
         """

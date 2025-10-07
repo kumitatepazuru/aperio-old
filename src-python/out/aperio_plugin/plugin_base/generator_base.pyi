@@ -11,11 +11,12 @@ class ObjectGeneratorBase(SubPluginBase):
         """
         フレーム生成プラグインの初期化を行う。必要に応じてサブクラスでオーバーライドする。
         """
-    def generate(self, obj_args: dict, shape: tuple[int, int, Literal[1, 3, 4]]) -> np.ndarray:
+    def generate(self, frame_number: int, obj_args: dict, shape: tuple[int, int, Literal[1, 3, 4]]) -> np.ndarray:
         """
         フレームを生成するメソッド。サブクラスで必ずオーバーライドする必要がある。
 
         Args:
+            frame_number (int): 生成するフレームの番号
             obj_args (dict): オブジェクト生成に必要な引数群
             shape (tuple[int]): 生成するフレームの形状 [height, width, channels]
 
@@ -32,11 +33,12 @@ class FilterGeneratorBase(SubPluginBase):
         """
         フィルター生成プラグインの初期化を行う。必要に応じてサブクラスでオーバーライドする。
         """
-    def generate(self, frame: np.ndarray, filter_args: dict) -> np.ndarray:
+    def generate(self, frame_number: int, frame: np.ndarray, filter_args: dict) -> np.ndarray:
         """
         フレームを生成するメソッド。サブクラスで必ずオーバーライドする必要がある。
 
         Args:
+            frame_number (int): 生成するフレームの番号
             frame (np.ndarray): 元のフレームデータ
             filter_args (dict): フィルター適用に必要な引数群
 

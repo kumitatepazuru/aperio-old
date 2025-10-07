@@ -1,7 +1,7 @@
 use gst::prelude::ElementExtManual;
 use gst::{Buffer, ClockTime};
 use gst_app::AppSrc;
-use numpy::{PyArray3, PyArrayMethods};
+use numpy::PyReadonlyArray3;
 use pyo3::prelude::PyAnyMethods;
 use pyo3::types::{PyDict, PyList};
 use pyo3::{Py, PyAny, PyErr, Python};
@@ -16,10 +16,12 @@ pub fn connect_need_enough_data(appsrc: AppSrc, pl_manager: Py<PyAny>) {
     let frame_count = Arc::new(Mutex::new(0u64));
 
     thread::spawn(move || {
+        let mut count = frame_count.lock().unwrap();
+
         loop {
             // ここでピクセルデータからGStreamerのバッファを作成する
             // PythonのPluginManagerを使ってフレームデータを取得
-            let buffer = Python::attach(|py| -> Result<Vec<u8>, PyErr> {
+            let buffers = Python::attach(|py| -> Result<Vec<Vec<u8>>, PyErr> {
                 let pl_manager = pl_manager.lock().unwrap();
                 let pl_manager = pl_manager.bind(py);
 
@@ -38,52 +40,60 @@ pub fn connect_need_enough_data(appsrc: AppSrc, pl_manager: Py<PyAny>) {
 
                 let frame_struct = PyList::new(py, vec![layer_struct])?;
 
-                let make_frame_func = pl_manager.getattr("make_frame")?;
-                let frame_data = make_frame_func
-                    .call1((frame_struct, 1920, 1080))?
-                    .cast_into::<PyArray3<u8>>()?;
-                let readonly_frame_data = frame_data.readonly();
-                let slice_data = readonly_frame_data.as_slice()?;
+                let make_frame_func = pl_manager.getattr("make_frames")?;
+                let frame_data_arr: Vec<PyReadonlyArray3<u8>> = make_frame_func
+                    .call1((*count, 10, frame_struct, 1920, 1080))?
+                    .extract()?;
 
-                Ok(slice_data.to_vec()) // 参照なのでそのまま返せない コピーが発生するのがつらい
+                let slice_data_arr = frame_data_arr
+                    .iter()
+                    .map(|x| x.as_slice())
+                    .collect::<Result<Vec<&[u8]>, _>>()?;
+
+                Ok(slice_data_arr.iter().map(|x| x.to_vec()).collect())
             })
             .expect("couldn't make frame buffer");
 
             // 取得したフレームデータからGStreamerのバッファを作成
-            let mut count = frame_count.lock().unwrap();
-            let mut buffer = Buffer::from_slice(buffer);
-            {
-                let buffer_mut = buffer.get_mut().expect("Failed to get mutable buffer");
-                let pts = *count * frame_duration;
-
-                buffer_mut.set_pts(pts);
-                // DTS (Decoding Timestamp)も設定することが推奨される
-                buffer_mut.set_dts(pts);
-                buffer_mut.set_duration(frame_duration);
+            if buffers.is_empty() {
+                eprintln!("No frame data received from Python");
+                continue;
             }
 
-            match appsrc.push_buffer(buffer) {
-                Ok(_) => {
-                    // 成功
-                    *count += 1;
-                    if *count % 30 == 0 {
-                        println!("Pushed {} frames", *count);
-                        println!(
-                            "running: {}",
-                            appsrc
-                                .current_running_time()
-                                .expect("could not get current running time")
-                                / frame_duration
-                        );
+            // bufferを1つづつappsrcにpushする
+            for buffer in buffers {
+                let mut buffer = Buffer::from_slice(buffer);
+                {
+                    let buffer_mut = buffer.get_mut().expect("Failed to get mutable buffer");
+                    let pts = *count * frame_duration;
+
+                    buffer_mut.set_pts(pts);
+                    // DTS (Decoding Timestamp)も設定することが推奨される
+                    buffer_mut.set_dts(pts);
+                    buffer_mut.set_duration(frame_duration);
+                }
+
+                match appsrc.push_buffer(buffer) {
+                    Ok(_) => {
+                        // 成功
+                        *count += 1;
+                        if *count % 30 == 0 {
+                            println!(
+                                "Pushed {} frames, running: {}",
+                                *count,
+                                appsrc.current_running_time().unwrap_or(ClockTime::ZERO)
+                                    / frame_duration
+                            );
+                        }
                     }
-                }
-                Err(gst::FlowError::Flushing) => {
-                    // パイプラインがフラッシュ中の場合警告
-                    println!("Pipeline is flushing!");
-                }
-                Err(e) => {
-                    eprintln!("Error pushing buffer: {:?}", e);
-                    break;
+                    Err(gst::FlowError::Flushing) => {
+                        // パイプラインがフラッシュ中の場合警告
+                        println!("Pipeline is flushing!");
+                    }
+                    Err(e) => {
+                        eprintln!("Error pushing buffer: {:?}", e);
+                        break;
+                    }
                 }
             }
         }

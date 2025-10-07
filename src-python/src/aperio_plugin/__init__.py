@@ -2,6 +2,7 @@ import glob
 import hashlib
 import os.path
 import shutil
+from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Callable
 
 import cv2
@@ -10,6 +11,8 @@ import numpy as np
 from .plugin_base import MainPluginBase, SubPluginBase
 from .plugin_base.generator_base import FilterGeneratorBase, ObjectGeneratorBase
 from .types.frame_structure import LayerStructure
+
+executor = ThreadPoolExecutor()
 
 
 class PluginManager:
@@ -177,11 +180,13 @@ class PluginManager:
         self.__load_plugins()
         return True
 
-    def make_frame(self, frame_structure: list[LayerStructure], width: int, height: int) -> np.ndarray:
+    def make_frame(self, frame_number: int, frame_structure: list[LayerStructure], width: int,
+                   height: int) -> np.ndarray:
         """
         指定されたフレーム構造に基づいてフレームを生成するメソッド。
 
         Args:
+            frame_number (int): 生成するフレームの番号 (現在は未使用)
             frame_structure (list[LayerStructure]): フレーム構造のリスト
             width (int): フレームの幅
             height (int): フレームの高さ
@@ -212,7 +217,8 @@ class PluginManager:
                     raise ValueError(f"Object plugin {layer['obj_base']} is not registered")
 
                 obj_plugin = self.object_plugins[layer["obj_base"]]
-                layer_frame = obj_plugin.generate(layer["obj_parameters"], (height, width, layer["channels"]))
+                layer_frame = obj_plugin.generate(frame_number, layer["obj_parameters"],
+                                                  (height, width, layer["channels"]))
                 if layer_frame.shape != (height, width, layer["channels"]):
                     raise ValueError(f"Generated frame shape {layer_frame.shape} does not match "
                                      f"expected shape {(height, width, layer['channels'])}")
@@ -223,7 +229,7 @@ class PluginManager:
                         raise ValueError(f"Filter plugin {effect['name']} is not registered")
 
                     filter_plugin = self.filter_plugins[effect["name"]]
-                    layer_frame = filter_plugin.generate(layer_frame, effect["parameters"])
+                    layer_frame = filter_plugin.generate(frame_number, layer_frame, effect["parameters"])
                     if layer_frame.shape != (height, width, layer["channels"]):
                         raise ValueError(f"After applying filter {effect['name']}, frame shape {layer_frame.shape} "
                                          f"does not match expected shape {(height, width, layer['channels'])}")
@@ -269,3 +275,34 @@ class PluginManager:
             raise RuntimeError(f"Failed to make frame: {e}")
 
         return final_frame
+
+    def make_frames(self, start_frame_number: int, amount: int, *args, **kwargs):
+        """
+        指定された数だけフレームをmultithreadingで生成するメソッド。make_frameと同じ引数を受け取り、amountで指定された数だけフレームを生成してリストで返す。
+
+        Args:
+            start_frame_number (int): 生成を開始するフレームの番号
+            amount (int): 生成するフレームの数
+            *args: make_frameに渡す引数
+            **kwargs: make_frameに渡すキーワード引数
+
+        Returns:
+            list[np.ndarray]: 生成されたフレームのリスト
+        """
+        try:
+            if not isinstance(amount, int) or amount <= 0:
+                raise ValueError("amount must be a positive integer")
+
+            frames = []
+            futures = [executor.submit(self.make_frame, start_frame_number + i, *args, **kwargs)
+                       for i in range(amount)]
+            for future in futures:
+                frames.append(future.result())
+            # for i in range(amount):
+            #     frames.append(self.make_frame(start_frame_number + i, *args, **kwargs))
+
+            return frames
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            raise RuntimeError(f"Failed to make frames: {e}")

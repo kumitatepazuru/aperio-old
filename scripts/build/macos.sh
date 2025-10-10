@@ -57,3 +57,8 @@ cp -v "$PYTHON_LIB" src-tauri/binaries/
 
 # opencvをビルド
 bash scripts/build/opencv/opencv.sh
+
+# github actions用: PKG_CONFIG系はGIHUB_ENVに保存して他のステップで使えるようにする
+echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
+echo "PKG_CONFIG_SYSROOT_DIR=$PKG_CONFIG_SYSROOT_DIR" >> $GITHUB_ENV
+echo "PATH=$PATH" >> $GITHUB_ENV

@@ -1,0 +1,22 @@
+[project]
+name = "aperio-plugin-stubs"
+version = "0.1.0"
+description = "A stub-only package for aperio plugin development"
+requires-python = "~=3.13.0"
+dependencies = [
+    "numpy>=2.3.3",
+]
+classifiers = [
+    "Typing :: Stubs Only"
+]
+
+# [tool.setuptools]セクションは、パッケージに含めるファイルを
+# 細かく制御したい場合に利用します。
+[tool.setuptools]
+# package_dir を指定して、パッケージ名とディレクトリ名をマッピングします
+package-dir = { "" = "out" }
+# src ディレクトリ以下のパッケージを自動的に検出します
+packages = { find = { where = ["out"] } }
+
+[tool.setuptools.package-data]
+"aperio_plugin" = ["*.pyi"]

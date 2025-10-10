@@ -91,3 +91,7 @@ $env:CMAKE_ARGS = "-DGSTREAMER_app_LIBRARY=${gstLib}/gstapp-1.0.lib `
 
 
 bash scripts/build/opencv/opencv.sh
+
+# github actions用: PKG_CONFIG系はGIHUB_ENVに保存して他のステップで使えるようにする
+Add-Content -Path $env:GITHUB_ENV -Value "PKG_CONFIG_PATH=$env:PKG_CONFIG_PATH"
+Add-Content -Path $env:GITHUB_ENV -Value "PATH=$env:PATH"

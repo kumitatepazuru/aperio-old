@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "python:stubgen": "uv run stubgen src-python/src/ -o src-python/out --include-docstrings",
+    "python:check": "uv run python -m mypy.stubtest aperio-plugin",
+    "uv:update": "uv run scripts/update-uv.py"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
